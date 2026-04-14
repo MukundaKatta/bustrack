@@ -44,15 +44,8 @@ BusTrack solves the "where's my bus?" problem that parents face every morning. A
 ---
 
 ## 📁 Repository Structure
-bustrack/
-├── apps/
-│   ├── web/          # Next.js 14 — parent app + admin panel
-│   └── mobile/       # Expo — driver app
-├── packages/
-│   └── shared/       # Shared types and utilities
-├── .github/
-│   └── workflows/    # CI/CD pipelines
-└── README.md
+<img width="1038" height="454" alt="image" src="https://github.com/user-attachments/assets/cf19f255-e74a-4d29-a3c8-a5b3e4c99448" />
+
 
 ---
 
