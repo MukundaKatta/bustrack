@@ -21,7 +21,8 @@ Closes BT-XX
 ## Definition of Done checklist
 
 - [ ] Branch from `dev`, will be squash-merged via reviewed PR
-- [ ] At least one teammate approved
+- [ ] Requested a 2nd reviewer (team lead is auto-assigned via CODEOWNERS; you pick the other)
+- [ ] 2 approvals landed (team lead + one teammate; branch protection enforces this)
 - [ ] CI green (lint, typecheck, build)
 - [ ] Acceptance criteria from the ticket manually verified
 - [ ] For UI work: screenshot or short screen recording attached below
