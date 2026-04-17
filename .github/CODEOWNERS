@@ -1,0 +1,6 @@
+# Team Zion — Code Ownership
+# The team lead is a required reviewer on all paths.
+# Combined with branch protection (2 approvals + code-owner review) on main and dev,
+# every PR needs Mukunda's approval plus one more teammate's.
+
+*    @MukundaKatta
