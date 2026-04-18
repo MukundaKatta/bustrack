@@ -16,7 +16,16 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
     "prettier": "^3.3.3",
+    "prisma": "^7.7.0",
     "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.7.0",
+    "@prisma/client": "^7.7.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.20.0"
   }
 }
