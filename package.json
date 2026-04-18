@@ -1,0 +1,19 @@
+{
+  "name": "bustrack",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prisma:generate": "prisma generate --schema packages/shared/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema packages/shared/prisma/schema.prisma --name init_schema",
+    "prisma:seed": "prisma db seed --schema packages/shared/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.7.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.7.0"
+  },
+  "prisma": {
+    "seed": "node packages/shared/prisma/seed.js"
+  }
+}

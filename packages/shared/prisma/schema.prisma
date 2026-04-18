@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PARENT
+  DRIVER
+}
+
+enum TripStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  fullName      String
+  passwordHash  String
+  role          Role
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  driverProfile Driver?
+}
+
+model Driver {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  licenseNo   String   @unique
+  phoneNumber String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trips Trip[]
+}
+
+model Bus {
+  id          String   @id @default(cuid())
+  busCode     String   @unique
+  capacity    Int
+  plateNumber String   @unique
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  trips Trip[]
+}
+
+model Route {
+  id          String   @id @default(cuid())
+  routeCode   String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stops Stop[]
+  trips Trip[]
+}
+
+model Stop {
+  id        String   @id @default(cuid())
+  routeId   String
+  name      String
+  latitude  Decimal  @db.Decimal(9, 6)
+  longitude Decimal  @db.Decimal(9, 6)
+  sequence  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, sequence])
+  @@index([routeId])
+}
+
+model Trip {
+  id             String     @id @default(cuid())
+  routeId        String
+  busId          String
+  driverId       String
+  scheduledStart DateTime
+  actualStart    DateTime?
+  actualEnd      DateTime?
+  status         TripStatus @default(SCHEDULED)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  route         Route          @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  bus           Bus            @relation(fields: [busId], references: [id], onDelete: Restrict)
+  driver        Driver         @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  locationPings LocationPing[]
+
+  @@index([routeId])
+  @@index([busId])
+  @@index([driverId])
+  @@index([status])
+}
+
+model LocationPing {
+  id        String   @id @default(cuid())
+  tripId    String
+  latitude  Decimal  @db.Decimal(9, 6)
+  longitude Decimal  @db.Decimal(9, 6)
+  speedKph  Decimal? @db.Decimal(6, 2)
+  heading   Int?
+  pingedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, pingedAt])
+}
