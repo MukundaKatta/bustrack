@@ -1,5 +1,22 @@
 {
   "name": "bustrack",
+<<<<<<< HEAD
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prisma:generate": "prisma generate --schema packages/shared/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema packages/shared/prisma/schema.prisma --name init_schema",
+    "prisma:seed": "prisma db seed --schema packages/shared/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.7.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.7.0"
+  },
+  "prisma": {
+    "seed": "node packages/shared/prisma/seed.js"
+=======
   "version": "0.0.0",
   "private": true,
   "description": "BusTrack monorepo (Team Zion): apps/web (Next.js), apps/mobile (Expo), packages/shared",
@@ -18,5 +35,6 @@
   "devDependencies": {
     "prettier": "^3.3.3",
     "typescript": "^5.9.2"
+>>>>>>> origin/dev
   }
 }
