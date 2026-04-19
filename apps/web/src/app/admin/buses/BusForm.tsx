@@ -2,36 +2,34 @@
 
 import { useState } from "react";
 import { Bus, BusStatus } from "./page";
+import { Button } from "@/components/ui/button";
 
 export default function BusForm({ onAdd }: { onAdd: (bus: Bus) => void }) {
-  const [busNumber, setBusNumber] = useState("");
-  const [driverName, setDriverName] = useState("");
+  const [name, setName] = useState("");
+  const [plateNumber, setPlateNumber] = useState("");
   const [capacity, setCapacity] = useState("");
-  const [status, setStatus] = useState<BusStatus>("idle");
   const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!busNumber || !driverName || !capacity) {
+if (!name || !plateNumber || !capacity) {
       setError("All fields are required");
       return;
     }
 
     const newBus: Bus = {
-      busNumber,
-      driverName,
+      name: name,
+      plate_number: plateNumber,
       capacity: Number(capacity),
-      status,
     };
 
     onAdd(newBus);
 
     // Reset
-    setBusNumber("");
-    setDriverName("");
+    setName("");
+    setPlateNumber("");
     setCapacity("");
-    setStatus("idle");
     setError("");
   };
 
@@ -44,17 +42,17 @@ export default function BusForm({ onAdd }: { onAdd: (bus: Bus) => void }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <input
           type="text"
-          placeholder="Bus Number"
-          value={busNumber}
-          onChange={(e) => setBusNumber(e.target.value)}
+          placeholder="Bus Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           className="w-full p-2 border rounded"
         />
 
         <input
           type="text"
-          placeholder="Driver Name"
-          value={driverName}
-          onChange={(e) => setDriverName(e.target.value)}
+          placeholder="Plate Number"
+          value={plateNumber}
+          onChange={(e) => setPlateNumber(e.target.value)}
           className="w-full p-2 border rounded"
         />
 
@@ -66,22 +64,10 @@ export default function BusForm({ onAdd }: { onAdd: (bus: Bus) => void }) {
           className="w-full p-2 border rounded"
         />
 
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as BusStatus)}
-          className="w-full p-2 border rounded"
-        >
-          <option value="idle">Idle</option>
-          <option value="active">Active</option>
-          <option value="maintenance">Maintenance</option>
-        </select>
-
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
+        <Button type="submit">
           Create Bus
-        </button>
+        </Button>
+        
       </form>
     </div>
   );

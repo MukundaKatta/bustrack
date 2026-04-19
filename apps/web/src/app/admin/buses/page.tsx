@@ -7,40 +7,41 @@ import BusTable from "./BusTable";
 export type BusStatus = "idle" | "active" | "maintenance";
 
 export type Bus = {
-  busNumber: string;
-  driverName: string;
+  name: string;
+  plate_number: string;
   capacity: number;
-  status: BusStatus;
 };
 
 export default function BusPage() {
   const [buses, setBuses] = useState<Bus[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // ✅ Load from localStorage
+  // TODO: Replace localStorage with real API calls for BT-14
   useEffect(() => {
-  const storedBuses = localStorage.getItem("buses");
-  if (storedBuses) {
-    setBuses(JSON.parse(storedBuses));
+  const stored = localStorage.getItem("buses");
+  if (stored) {
+    setBuses(JSON.parse(stored));
   }
   setIsLoaded(true);
-}, []);
+  }, []);
 
   // ✅ Save to localStorage
   useEffect(() => {
-  if (!isLoaded) return; // 🚨 prevents overwrite
+  if (!isLoaded) return; // Don't save until we've loaded the initial data
 
   localStorage.setItem("buses", JSON.stringify(buses));
   console.log("Saved buses:", buses);
-}, [buses, isLoaded]);
+  }, [buses, isLoaded]);
 
   const handleAdd = (bus: Bus) => {
     setBuses((prev) => [...prev, bus]);
   };
 
-  const handleDelete = (index: number) => {
-    setBuses((prev) => prev.filter((_, i) => i !== index));
+  const handleDelete = (plate_number: string) => {
+    setBuses((prev) => prev.filter((bus) => bus.plate_number !== plate_number));
   };
+  if(!isLoaded) return null;
+
 
   return (
     <div className="p-6">

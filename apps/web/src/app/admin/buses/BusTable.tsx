@@ -1,13 +1,14 @@
 "use client";
 
 import { Bus } from "./page";
+import { Button } from "@/components/ui/button"; 
 
 export default function BusTable({
   buses,
   onDelete,
 }: {
   buses: Bus[];
-  onDelete: (index: number) => void;
+  onDelete: (plate_number: string) => void;
 }) {
   return (
     <div className="bg-white p-4 rounded-lg shadow-md">
@@ -20,43 +21,28 @@ export default function BusTable({
           <table className="w-full border border-gray-200 rounded-lg">
             <thead className="bg-gray-100">
               <tr>
-                <th className="p-3 text-left">Bus Number</th>
-                <th className="p-3 text-left">Driver</th>
+                <th className="p-3 text-left">Bus Name</th>
+                <th className="p-3 text-left">Plate Number</th>
                 <th className="p-3 text-left">Capacity</th>
-                <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-left">Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {buses.map((bus, index) => (
-                <tr key={index} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{bus.busNumber}</td>
-                  <td className="p-3">{bus.driverName}</td>
+              {buses.map((bus) => (
+                <tr key={bus.plate_number} className="border-t hover:bg-gray-50">
+                  <td className="p-3">{bus.name}</td>
+                  <td className="p-3">{bus.plate_number}</td>
                   <td className="p-3">{bus.capacity}</td>
 
-                  {/* Status Badge */}
                   <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded text-white text-sm ${
-                        bus.status === "active"
-                          ? "bg-green-500"
-                          : bus.status === "idle"
-                          ? "bg-yellow-500"
-                          : "bg-orange-500"
-                      }`}
-                    >
-                      {bus.status}
-                    </span>
-                  </td>
-
-                  <td className="p-3">
-                    <button
-                      onClick={() => onDelete(index)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"
-                    >
-                      Delete
-                    </button>
+                  <Button
+                    variant="outline"
+                    className="bg-red-500 hover:bg-red-600 text-white border-none"
+                    onClick={() => onDelete(bus.plate_number)}
+                  >
+                    Delete
+                  </Button>
                   </td>
                 </tr>
               ))}
