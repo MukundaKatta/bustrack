@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prisma:generate": "prisma generate --schema packages/shared/prisma/schema.prisma",
-    "prisma:migrate": "prisma migrate dev --schema packages/shared/prisma/schema.prisma --name init_schema",
+    "prisma:migrate": "prisma migrate dev --schema packages/shared/prisma/schema.prisma --name align_prd_schema",
     "prisma:seed": "prisma db seed --schema packages/shared/prisma/schema.prisma",
     "db:seed": "pnpm prisma:seed",
     "db:ping": "tsx test-db.ts"
