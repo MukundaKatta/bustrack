@@ -13,7 +13,8 @@
     "build": "pnpm -r --if-present build",
     "test": "pnpm -r --if-present test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:ping": "tsx test-db.ts"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
