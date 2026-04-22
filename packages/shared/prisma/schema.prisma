@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -59,7 +58,7 @@ model Bus {
 
   drivers Driver[]
   routes  Route[]
-  trips Trip[]
+  trips   Trip[]
 
   @@map("Bus")
 }
