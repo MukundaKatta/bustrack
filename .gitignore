@@ -140,3 +140,5 @@ vite.config.ts.timestamp-*
 .DS_Store
 **/.DS_Store
 package-lock.json
+
+/generated/prisma
