@@ -1,3 +1,6 @@
-// Shared types and utilities for BusTrack.
-// Populated by BT-05 (Prisma schema / domain types) and onwards.
-export {};
+export type LocationPing = {
+  latitude: number;
+  longitude: number;
+  speed: number | null;
+  timestamp: string;
+};

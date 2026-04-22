@@ -1,5 +1,6 @@
+import type { LocationPing } from '@bustrack/shared';
 import * as Location from 'expo-location';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,13 +10,18 @@ import {
   View,
 } from 'react-native';
 
+const PING_INTERVAL_MS = 30_000;
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
 
 type Coordinates = {
   latitude: number;
   longitude: number;
   accuracy: number | null;
+  speed: number | null;
   timestamp: string;
+  isoTimestamp: string;
 };
 
 function formatCoordinates(location: Location.LocationObject): Coordinates {
@@ -23,7 +29,18 @@ function formatCoordinates(location: Location.LocationObject): Coordinates {
     latitude: location.coords.latitude,
     longitude: location.coords.longitude,
     accuracy: location.coords.accuracy ?? null,
+    speed: location.coords.speed ?? null,
     timestamp: new Date(location.timestamp).toLocaleTimeString(),
+    isoTimestamp: new Date(location.timestamp).toISOString(),
+  };
+}
+
+function createPingPayload(coordinates: Coordinates): LocationPing {
+  return {
+    latitude: coordinates.latitude,
+    longitude: coordinates.longitude,
+    speed: coordinates.speed,
+    timestamp: coordinates.isoTimestamp,
   };
 }
 
@@ -32,6 +49,16 @@ export default function HomeScreen() {
   const [backgroundPermission, setBackgroundPermission] = useState<PermissionState>('idle');
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [statusMessage, setStatusMessage] = useState('Requesting location access...');
+  const [tripActive, setTripActive] = useState(false);
+  const [pendingPingCount, setPendingPingCount] = useState(0);
+  const [lastPingStatus, setLastPingStatus] = useState('No ping sent yet.');
+
+  const latestCoordinatesRef = useRef<Coordinates | null>(null);
+  const pendingPingsRef = useRef<LocationPing[]>([]);
+  const isSendingPingRef = useRef(false);
+
+  const canTrack = foregroundPermission === 'granted';
+  const pingReady = canTrack && Boolean(API_BASE_URL);
 
   useEffect(() => {
     let mounted = true;
@@ -61,7 +88,9 @@ export default function HomeScreen() {
         });
         if (!mounted) return;
 
-        setCoordinates(formatCoordinates(currentLocation));
+        const initialCoordinates = formatCoordinates(currentLocation);
+        latestCoordinatesRef.current = initialCoordinates;
+        setCoordinates(initialCoordinates);
 
         const background = await Location.requestBackgroundPermissionsAsync();
         if (!mounted) return;
@@ -82,7 +111,10 @@ export default function HomeScreen() {
           },
           (nextLocation) => {
             if (!mounted) return;
-            setCoordinates(formatCoordinates(nextLocation));
+
+            const nextCoordinates = formatCoordinates(nextLocation);
+            latestCoordinatesRef.current = nextCoordinates;
+            setCoordinates(nextCoordinates);
           },
         );
       } catch (error) {
@@ -106,6 +138,84 @@ export default function HomeScreen() {
     };
   }, []);
 
+  const enqueueLatestPing = () => {
+    const latestCoordinates = latestCoordinatesRef.current;
+
+    if (!latestCoordinates) {
+      setLastPingStatus('Trip is active, but GPS is not ready yet.');
+      return;
+    }
+
+    pendingPingsRef.current.push(createPingPayload(latestCoordinates));
+    setPendingPingCount(pendingPingsRef.current.length);
+  };
+
+  const flushPingQueue = async () => {
+    if (!API_BASE_URL || isSendingPingRef.current || pendingPingsRef.current.length === 0) {
+      return;
+    }
+
+    isSendingPingRef.current = true;
+
+    try {
+      while (pendingPingsRef.current.length > 0) {
+        const nextPing = pendingPingsRef.current[0];
+        const response = await fetch(`${API_BASE_URL}/api/pings`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(nextPing),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Ping failed with status ${response.status}`);
+        }
+
+        pendingPingsRef.current.shift();
+        setPendingPingCount(pendingPingsRef.current.length);
+        setLastPingStatus(`Last ping sent at ${new Date().toLocaleTimeString()}.`);
+      }
+    } catch (error) {
+      setPendingPingCount(pendingPingsRef.current.length);
+      setLastPingStatus(
+        error instanceof Error
+          ? `Network retry queued: ${error.message}`
+          : 'Network retry queued for the next ping cycle.',
+      );
+    } finally {
+      isSendingPingRef.current = false;
+    }
+  };
+
+  useEffect(() => {
+    if (!tripActive) {
+      return;
+    }
+
+    if (!pingReady) {
+      setLastPingStatus(
+        API_BASE_URL
+          ? 'Trip is active, but location permission is still required.'
+          : 'Trip is active, but EXPO_PUBLIC_API_BASE_URL is not configured.',
+      );
+      return;
+    }
+
+    const runPingCycle = async () => {
+      enqueueLatestPing();
+      await flushPingQueue();
+    };
+
+    void runPingCycle();
+
+    const interval = setInterval(() => {
+      void runPingCycle();
+    }, PING_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [tripActive, pingReady]);
+
   const checkLocationServices = async () => {
     try {
       await Location.enableNetworkProviderAsync();
@@ -119,17 +229,53 @@ export default function HomeScreen() {
     }
   };
 
+  const toggleTrip = () => {
+    setTripActive((previous) => {
+      const next = !previous;
+
+      if (!next) {
+        pendingPingsRef.current = [];
+        setPendingPingCount(0);
+        setLastPingStatus('Trip stopped. Pending retries cleared.');
+      } else {
+        setLastPingStatus('Trip active. Preparing 30-second ping cycle.');
+      }
+
+      return next;
+    });
+  };
+
+  const tripStatusLabel = useMemo(() => {
+    if (!tripActive) {
+      return 'Inactive';
+    }
+
+    if (!pingReady) {
+      return 'Blocked';
+    }
+
+    return 'Active';
+  }, [pingReady, tripActive]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>BusTrack Driver</Text>
-        <Text style={styles.subtitle}>Live location permission and tracking</Text>
+        <Text style={styles.subtitle}>Live location permission and trip ping tracking</Text>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Permission status</Text>
           <Text style={styles.label}>Foreground: {foregroundPermission}</Text>
           <Text style={styles.label}>Background: {backgroundPermission}</Text>
           <Text style={styles.status}>{statusMessage}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Trip ping status</Text>
+          <Text style={styles.label}>Trip: {tripStatusLabel}</Text>
+          <Text style={styles.label}>Queued retries: {pendingPingCount}</Text>
+          <Text style={styles.label}>API base URL: {API_BASE_URL ?? 'Missing EXPO_PUBLIC_API_BASE_URL'}</Text>
+          <Text style={styles.status}>{lastPingStatus}</Text>
         </View>
 
         <View style={styles.card}>
@@ -140,6 +286,9 @@ export default function HomeScreen() {
               <Text style={styles.value}>Longitude: {coordinates.longitude.toFixed(6)}</Text>
               <Text style={styles.value}>
                 Accuracy: {coordinates.accuracy ? `${Math.round(coordinates.accuracy)} m` : 'Unknown'}
+              </Text>
+              <Text style={styles.value}>
+                Speed: {coordinates.speed !== null ? `${coordinates.speed.toFixed(2)} m/s` : 'Unknown'}
               </Text>
               <Text style={styles.value}>Updated: {coordinates.timestamp}</Text>
             </>
@@ -161,9 +310,18 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <Pressable style={styles.button} onPress={() => void checkLocationServices()}>
-          <Text style={styles.buttonText}>Check device location services</Text>
-        </Pressable>
+        <View style={styles.actions}>
+          <Pressable style={[styles.button, styles.secondaryButton]} onPress={() => void checkLocationServices()}>
+            <Text style={styles.buttonText}>Check location services</Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.button, tripActive ? styles.stopButton : styles.startButton]}
+            onPress={toggleTrip}
+          >
+            <Text style={styles.buttonText}>{tripActive ? 'Stop trip' : 'Start trip'}</Text>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -232,13 +390,24 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#475569',
   },
-  button: {
+  actions: {
     marginTop: 'auto',
-    backgroundColor: '#0f766e',
+    gap: 12,
+  },
+  button: {
     borderRadius: 14,
     paddingVertical: 14,
     paddingHorizontal: 18,
     alignItems: 'center',
+  },
+  secondaryButton: {
+    backgroundColor: '#0f766e',
+  },
+  startButton: {
+    backgroundColor: '#1d4ed8',
+  },
+  stopButton: {
+    backgroundColor: '#b91c1c',
   },
   buttonText: {
     color: '#ffffff',
