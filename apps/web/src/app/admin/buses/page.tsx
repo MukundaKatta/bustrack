@@ -4,8 +4,6 @@ import { useEffect, useState } from "react";
 import BusForm from "./BusForm";
 import BusTable from "./BusTable";
 
-export type BusStatus = "idle" | "active" | "maintenance";
-
 export type Bus = {
   name: string;
   plate_number: string;
