@@ -12,6 +12,7 @@ import {
 
 const PING_INTERVAL_MS = 30_000;
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
+const PING_INTERVAL_LABEL = `${PING_INTERVAL_MS / 1000}-second`;
 
 type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
 
@@ -238,7 +239,7 @@ export default function HomeScreen() {
         setPendingPingCount(0);
         setLastPingStatus('Trip stopped. Pending retries cleared.');
       } else {
-        setLastPingStatus('Trip active. Preparing 30-second ping cycle.');
+        setLastPingStatus(`Trip active. Preparing ${PING_INTERVAL_LABEL} ping cycle.`);
       }
 
       return next;

@@ -30,6 +30,8 @@ export async function POST(request: Request) {
       );
     }
 
+    // TODO(BT-05): Persist accepted pings with Prisma here once the schema work in PR #8 lands.
+    // TODO: Require a driver session token before accepting pings in a future auth ticket.
     return NextResponse.json(
       {
         ok: true,
