@@ -1,34 +1,37 @@
 <!--
-Ticket: BT-XX
-Branch:  feat/BT-XX-short-description  (or fix/BT-XX-...)
+Replace BT-XX everywhere below. Branch naming:
+  feat/BT-XX-short-slug   or   fix/BT-XX-short-slug
 -->
 
-## What & Why
+## Summary
 
-_A short description of what this PR does and the ticket it closes._
-
-Closes BT-XX
+**Ticket:** BT-XX  
+**What:** One or two sentences on what changed and why it matters.  
+**Closes:** BT-XX _(link the Jira issue in the PR sidebar if your workflow uses that instead)_
 
 ## Changes
 
-- Bullet list of notable changes
+- …
+- …
 
 ## How to test
 
 1. `pnpm install`
-2. …
+2. `pnpm prisma:generate` _(if Prisma schema or client changed)_
+3. `pnpm --filter @bustrack/web typecheck` _(and/or the commands your ticket lists)_
+4. …
 
-## Definition of Done checklist
+## Definition of Done
 
-- [ ] Branch from `dev`, will be squash-merged via reviewed PR
-- [ ] Requested a 2nd reviewer (team lead is auto-assigned via CODEOWNERS; you pick the other)
-- [ ] 2 approvals landed (team lead + one teammate; branch protection enforces this)
-- [ ] CI green (lint, typecheck, build)
-- [ ] Acceptance criteria from the ticket manually verified
-- [ ] For UI work: screenshot or short screen recording attached below
-- [ ] Ticket moved to "Done" on the Jira board
-- [ ] Works on the deployed URL, not just locally
+- [ ] Branch is up to date with `dev` and targets `dev` for merge (squash-merge via reviewed PR)
+- [ ] Second reviewer requested (CODEOWNERS assigns the team lead; you pick the other reviewer)
+- [ ] Two approvals (team lead + teammate) per branch protection
+- [ ] CI green: lint, typecheck, build as required by the repo
+- [ ] Ticket acceptance criteria verified manually
+- [ ] UI change: screenshot or short recording in **Screenshot / recording** below
+- [ ] Jira ticket moved to Done after merge (or per team policy)
+- [ ] Verified on deployed environment when the ticket requires it, not only locally
 
 ## Screenshot / recording
 
-<!-- paste here for UI work -->
+<!-- Required for UI changes; otherwise write N/A -->
