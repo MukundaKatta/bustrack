@@ -1,46 +1,68 @@
-import { type LocationPing } from '@bustrack/shared';
-import { NextResponse } from 'next/server';
+import { Role, TripStatus } from "@prisma/client";
+import { getServerSession } from "next-auth";
+import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { pingBodySchema } from "./schema";
 
-function isValidPing(payload: unknown): payload is LocationPing {
-  if (!payload || typeof payload !== 'object') {
-    return false;
-  }
-
-  const ping = payload as Record<string, unknown>;
-
-  return (
-    typeof ping.latitude === 'number' &&
-    Number.isFinite(ping.latitude) &&
-    typeof ping.longitude === 'number' &&
-    Number.isFinite(ping.longitude) &&
-    (ping.speed === null || (typeof ping.speed === 'number' && Number.isFinite(ping.speed))) &&
-    typeof ping.timestamp === 'string' &&
-    !Number.isNaN(Date.parse(ping.timestamp))
-  );
-}
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  try {
-    const payload = await request.json();
-
-    if (!isValidPing(payload)) {
-      return NextResponse.json(
-        { error: 'Invalid ping payload. Expected latitude, longitude, speed, and timestamp.' },
-        { status: 400 },
-      );
-    }
-
-    // TODO(BT-05): Persist accepted pings with Prisma here once the schema work in PR #8 lands.
-    // TODO: Require a driver session token before accepting pings in a future auth ticket.
-    return NextResponse.json(
-      {
-        ok: true,
-        receivedAt: new Date().toISOString(),
-        ping: payload,
-      },
-      { status: 202 },
-    );
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 });
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id || session.user.role !== Role.driver) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  let json: unknown;
+  try {
+    json = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const parsed = pingBodySchema.safeParse(json);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "Validation failed", issues: parsed.error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  const driver = await prisma.driver.findUnique({
+    where: { userId: session.user.id },
+  });
+  if (!driver) {
+    return NextResponse.json({ error: "Driver profile not found" }, { status: 403 });
+  }
+
+  const trip = await prisma.trip.findFirst({
+    where: {
+      driverId: driver.id,
+      status: TripStatus.IN_PROGRESS,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (!trip) {
+    return NextResponse.json({ error: "No active trip for this driver" }, { status: 409 });
+  }
+
+  const { latitude, longitude, speed, recordedAt } = parsed.data;
+  const ping = await prisma.locationPing.create({
+    data: {
+      tripId: trip.id,
+      latitude,
+      longitude,
+      speed: speed ?? null,
+      recordedAt: recordedAt ? new Date(recordedAt) : undefined,
+    },
+  });
+
+  return NextResponse.json(
+    {
+      id: ping.id,
+      tripId: ping.tripId,
+      recordedAt: ping.recordedAt.toISOString(),
+    },
+    { status: 201 },
+  );
 }
