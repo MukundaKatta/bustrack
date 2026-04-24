@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  parent @map("PARENT")
+  driver @map("DRIVER")
+  admin  @map("ADMIN")
+}
+
+enum TripStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("passwordHash")
+  role         Role
+  name         String   @map("fullName")
+  createdAt    DateTime @default(now()) @map("createdAt")
+  updatedAt    DateTime @updatedAt @map("updatedAt")
+
+  driverProfile Driver?
+
+  @@map("User")
+}
+
+model Driver {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("userId")
+  busId     String   @map("bus_id")
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bus   Bus    @relation(fields: [busId], references: [id], onDelete: Restrict)
+  trips Trip[]
+
+  @@index([busId])
+  @@map("Driver")
+}
+
+model Bus {
+  id          String   @id @default(cuid())
+  name        String   @map("busCode")
+  plateNumber String   @unique @map("plateNumber")
+  capacity    Int
+  createdAt   DateTime @default(now()) @map("createdAt")
+  updatedAt   DateTime @updatedAt @map("updatedAt")
+
+  drivers Driver[]
+  routes  Route[]
+  trips Trip[]
+
+  @@map("Bus")
+}
+
+model Route {
+  id        String   @id @default(cuid())
+  name      String
+  busId     String   @map("bus_id")
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
+  bus   Bus    @relation(fields: [busId], references: [id], onDelete: Restrict)
+  stops Stop[]
+  trips Trip[]
+
+  @@index([busId])
+  @@map("Route")
+}
+
+model Stop {
+  id        String   @id @default(cuid())
+  routeId   String   @map("routeId")
+  name      String
+  latitude  Decimal  @db.Decimal(9, 6)
+  longitude Decimal  @db.Decimal(9, 6)
+  sequence  Int
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
+  route Route @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, sequence])
+  @@index([routeId])
+  @@map("Stop")
+}
+
+model Trip {
+  id        String     @id @default(cuid())
+  driverId  String     @map("driverId")
+  busId     String     @map("busId")
+  routeId   String     @map("routeId")
+  startedAt DateTime?  @map("actualStart")
+  endedAt   DateTime?  @map("actualEnd")
+  status    TripStatus @default(SCHEDULED)
+  createdAt DateTime   @default(now()) @map("createdAt")
+  updatedAt DateTime   @updatedAt @map("updatedAt")
+
+  route         Route          @relation(fields: [routeId], references: [id], onDelete: Restrict)
+  bus           Bus            @relation(fields: [busId], references: [id], onDelete: Restrict)
+  driver        Driver         @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  locationPings LocationPing[]
+
+  @@index([routeId])
+  @@index([busId])
+  @@index([driverId])
+  @@index([status])
+  @@map("Trip")
+}
+
+model LocationPing {
+  id         String   @id @default(cuid())
+  tripId     String   @map("tripId")
+  latitude   Decimal  @db.Decimal(9, 6)
+  longitude  Decimal  @db.Decimal(9, 6)
+  speed      Decimal? @db.Decimal(6, 2) @map("speedKph")
+  recordedAt DateTime @default(now()) @map("pingedAt")
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, recordedAt])
+  @@map("LocationPing")
+}

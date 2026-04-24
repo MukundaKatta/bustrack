@@ -64,15 +64,15 @@ BusTrack solves the "where's my bus?" problem that parents face every morning. A
 git clone https://github.com/MukundaKatta/bustrack.git
 cd bustrack
 
-# Install dependencies (once we have package.json)
-npm install
+# Install dependencies (repo uses pnpm workspaces)
+pnpm install
 
 # Set up environment variables
 cp .env.example .env
 # Fill in the values (ask tech lead for DB credentials)
 
-# Run dev server
-npm run dev
+# Run the web app dev server
+pnpm --filter @bustrack/web dev
 ```
 
 ---
