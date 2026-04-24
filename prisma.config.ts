@@ -9,6 +9,7 @@ export default defineConfig({
     path: "packages/shared/prisma/migrations",
   },
   datasource: {
+    // Prisma 7 datasource URL source of truth for CLI + Client generation.
     url: process.env["DATABASE_URL"],
   },
 });

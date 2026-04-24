@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Bus, BusStatus } from "./page";
+import { Bus } from "./page";
 import { Button } from "@/components/ui/button";
 
 export default function BusForm({ onAdd }: { onAdd: (bus: Bus) => void }) {
