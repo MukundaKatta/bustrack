@@ -1,17 +1,26 @@
-import { View, Text } from 'react-native';
+import { View, Text, Button } from "react-native";
 
 export default function Home() {
   return (
     <View
       style={{
         flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+        padding: 20,
+        justifyContent: "center",
       }}
     >
-      <Text style={{ fontSize: 22, fontWeight: 'bold' }}>
-        Welcome to Driver Home 🚍
+      <Text style={{ fontSize: 22, fontWeight: "bold" }}>
+        Welcome, Driver 🚌
       </Text>
+
+      <View style={{ marginTop: 20 }}>
+        <Text>Bus Number: --</Text>
+        <Text>Route: --</Text>
+      </View>
+
+      <View style={{ marginTop: 40 }}>
+        <Button title="Start Trip" onPress={() => {}} />
+      </View>
     </View>
   );
 }
