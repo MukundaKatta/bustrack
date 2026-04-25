@@ -4,7 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 7 reads DATABASE_URL from prisma.config.ts (datasource.url).
+  // Keep URL out of schema.prisma to avoid P1012 validation errors.
 }
 
 enum Role {
@@ -59,7 +60,7 @@ model Bus {
 
   drivers Driver[]
   routes  Route[]
-  trips Trip[]
+  trips   Trip[]
 
   @@map("Bus")
 }

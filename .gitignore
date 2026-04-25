@@ -139,6 +139,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .DS_Store
 **/.DS_Store
+.expo/
 package-lock.json
 
 /generated/prisma
