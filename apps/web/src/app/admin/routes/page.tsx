@@ -14,10 +14,17 @@ type Bus = {
 };
 
 type StopInput = {
+  id: string;
   name: string;
   latitude: string;
   longitude: string;
 };
+
+type StoredBus = {
+  name: string;
+  plate_number: string;
+};
+
 
 export default function CreateRoutePage() {
   const [routeName, setRouteName] = useState("");
@@ -25,13 +32,13 @@ export default function CreateRoutePage() {
   const [buses, setBuses] = useState<Bus[]>([]);
 
   const [stops, setStops] = useState<StopInput[]>([
-    { name: "", latitude: "", longitude: "" },
+    { id: crypto.randomUUID(), name: "", latitude: "", longitude: "" },
   ]);
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // TODO(BT-14): Replace localStorage with API call: GET /api/buses
+  // TODO: Replace localStorage with API call: GET /api/buses
 
   useEffect(() => {
     const stored = localStorage.getItem("buses");
@@ -42,7 +49,7 @@ export default function CreateRoutePage() {
       const parsed = JSON.parse(stored);
 
       // Mapping old structure → Prisma-aligned structure
-      const formatted: Bus[] = parsed.map((b: any) => ({
+      const formatted: Bus[] = parsed.map((b: StoredBus) => ({
         id: b.plate_number, // temporary ID
         name: b.name,
         plateNumber: b.plate_number,
@@ -57,28 +64,25 @@ export default function CreateRoutePage() {
   const addStop = () => {
     setStops((prev) => [
       ...prev,
-      { name: "", latitude: "", longitude: "" },
+      { id: crypto.randomUUID(), name: "", latitude: "", longitude: "" },
     ]);
   };
 
-  const removeStop = (index: number) => {
+  const removeStop = (id: string) => {
     if (stops.length === 1) return;
 
-    setStops((prev) => prev.filter((_, i) => i !== index));
+    setStops((prev) => prev.filter((s) => s.id !== id));
   };
 
   const updateStop = (
-    index: number,
+    id: string,
     field: "name" | "latitude" | "longitude",
     value: string
   ) => {
-    setStops((prev) => {
-      const updated = [...prev];
-      if (!updated[index]) return prev;
-
-      updated[index][field] = value;
-      return updated;
-    });
+    setStops((prev) =>
+    prev.map((s) =>
+    s.id === id? {...s, [field]: value} : s)
+    );
     setError("");
   };
 
@@ -102,8 +106,7 @@ export default function CreateRoutePage() {
       }
 
       if (
-        isNaN(Number(stop.latitude)) ||
-        isNaN(Number(stop.longitude))
+        isNaN(Number(stop.latitude)) || isNaN(Number(stop.longitude))
       ) {
         setError(
           `Stop ${index + 1}: Latitude and Longitude must be valid numbers.`
@@ -141,7 +144,7 @@ export default function CreateRoutePage() {
 
       setRouteName("");
       setSelectedBus("");
-      setStops([{ name: "", latitude: "", longitude: "" }]);
+      setStops([{id: crypto.randomUUID(), name: "", latitude: "", longitude: "" }]);
     } catch (error) {
       console.error("Error saving route:", error);
       setError("Failed to save route. Please try again.");
@@ -164,105 +167,135 @@ export default function CreateRoutePage() {
         </div>
       )}
 
-      <div className="mb-4">
-        <label className="block mb-1 font-medium">
-          Route Name
-        </label>
-        <input
-          type="text"
-          value={routeName}
-          onChange={(e) => {
-            setRouteName(e.target.value);
-            setError("");
-          }}
-          className="border p-2 w-full rounded"
-          placeholder="Enter route name"
-        />
-      </div>
+      <form 
+        onSubmit={(e) => {
+        e.preventDefault();
+        handleSubmit();
+        }}
+      >
+        <div className="mb-4">
+          <label htmlFor="routeName" className="block mb-1 font-medium">
+            Route Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            id="routeName"
+            type="text"
+            value={routeName}
+            onChange={(e) => setRouteName(e.target.value)}
+            className="border p-2 w-full rounded"
+            placeholder="Enter route name"
+          />
+        </div>
 
-      <div className="mb-6">
-        <label className="block mb-1 font-medium">
-          Select Bus
-        </label>
-        <select
-          value={selectedBus}
-          onChange={(e) => {
-            setSelectedBus(e.target.value);
-            setError("");
-          }}
-          className="border p-2 w-full rounded"
-        >
-          <option value="">Select Bus</option>
-
-          {buses.map((bus) => (
-            <option key={bus.id} value={bus.id}>
-              {bus.name} ({bus.plateNumber})
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="mb-6">
-        <h2 className="font-medium mb-3">Stops</h2>
-
-        {stops.map((stop, index) => (
-          <div
-            key={index}
-            className="border p-4 rounded mb-3 flex flex-wrap gap-2 items-center"
+        <div className="mb-6">
+          <label htmlFor="bus" className="block mb-1 font-medium">
+            Select Bus <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="bus"
+            value={selectedBus}
+            onChange={(e) => setSelectedBus(e.target.value)}
+            className="border p-2 w-full rounded"
           >
-            <input
-              type="text"
-              placeholder="Stop Name"
-              value={stop.name}
-              onChange={(e) =>
-                updateStop(index, "name", e.target.value)
-              }
-              className="border p-2 rounded flex-1"
-            />
+            <option value="">Select Bus</option>
 
-            <input
-              type="number"
-              step="any"
-              placeholder="Latitude"
-              value={stop.latitude}
-              onChange={(e) =>
-                updateStop(index, "latitude", e.target.value)
-              }
-              className="border p-2 rounded w-[120px]"
-            />
+            {buses.map((bus) => (
+              <option key={bus.id} value={bus.id}>
+                {bus.name} ({bus.plateNumber})
+              </option>
+            ))}
+          </select>
+        </div>
 
-            <input
-              type="number"
-              step="any"
-              placeholder="Longitude"
-              value={stop.longitude}
-              onChange={(e) =>
-                updateStop(index, "longitude", e.target.value)
-              }
-              className="border p-2 rounded w-[120px]"
-            />
+        <div className="mb-6">
+          
+          <h2 className="font-medium mb-3">List of Stops</h2>
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full  text-sm">
+                <thead className="border-r-gray-100 text-gray-700">
+                  <tr>
+                  <th className="text-left px-4 py-2">Stop Name</th>
+                  <th className="text-center px-4 py-2">Latitude</th>
+                  <th className="text-center px-4 py-2">Longitude</th>
+                  <th className="text-center px-4 py-2">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stops.map((stop, index) => (
+                  <tr key={stop.id} className="border-t">
+                    <td className="px-4 py-2">
+                      <input
+                        id={`name-${stop.id}`}
+                        type="text"
+                        placeholder="Stop Name"
+                        value={stop.name}
+                        onChange={(e) =>
+                          updateStop(stop.id, "name", e.target.value)
+                        }
+                        className="p-2 w-full outline-noe bg-transparent focus:bg-gray-100 rounded"
+                      />
+                    </td>             
+                    <td className="px-4 py-2">
+                      <input
+                        id={`lat-${stop.id}`}
+                        type="number"
+                        step="any"
+                        placeholder="Latitude"
+                        value={stop.latitude}
+                        onChange={(e) =>
+                          updateStop(stop.id, "latitude", e.target.value)
+                        }
+                        className="p-2 w-full outline-noe bg-transparent focus:bg-gray-100 rounded"
+                      />
+                    </td>
+                    <td className="px-4 py-2">
+                      <input
+                        id={`lng-${stop.id}`}
+                        type="number"
+                        step="any"
+                        placeholder="Longitude"
+                        value={stop.longitude}
+                        onChange={(e) =>
+                          updateStop(stop.id, "longitude", e.target.value)
+                        }
+                        className="p-2 w-full outline-noe bg-transparent focus:bg-gray-100 rounded"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => removeStop(stop.id)}
+                        className="bg-red-500 hover:bg-red-600 text-white border-none"
+                      >
+                        Remove
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={4} className="px-4 py-2">
+                    <Button 
+                      type="button"
+                      onClick={addStop} 
+                      variant="outline"
+                      className="bg-green-500 hover:bg-green-600 text-white border-none py-2 w-full"
+                    >
+                      Add Stop
+                    </Button>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>          
+        </div>
 
-            <Button
-              variant="ghost"
-              className="bg-red-500 hover:bg-red-600 text-white border-none"
-              onClick={() => removeStop(index)}
-            >
-              Remove
-            </Button>
-          </div>
-        ))}
-
-        <Button onClick={addStop} 
-          variant="outline"
-          className="bg-green-500 hover:br-green-600 text-white border-none"
-          >
-          + Add Stop
+        <Button type="submit" className="w-full">
+          Create Route
         </Button>
-      </div>
-
-      <Button onClick={handleSubmit} className="w-full">
-        Create Route
-      </Button>
+      </form>
     </div>
   );
 }
