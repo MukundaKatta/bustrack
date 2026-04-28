@@ -9,6 +9,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
+import { API_URL } from '../lib/api';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -19,35 +20,34 @@ export default function HomeScreen() {
   const [emailFocus, setEmailFocus] = useState(false);
   const [passwordFocus, setPasswordFocus] = useState(false);
 
-  // 🚀 LOGIN FUNCTION
   const handleLogin = async () => {
+    if (!email || !password) {
+      alert('Please enter email and password');
+      return;
+    }
+
     try {
-      if (!email || !password) {
-        alert('Please enter email and password');
+      const res = await fetch(
+        `${API_URL}/api/driver/login`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error ?? 'Login failed');
         return;
       }
 
-      console.log('Logging in...');
-
-      // 🔹 TEMP MOCK API RESPONSE
-      const response = {
-        token: 'demo-token-123',
-      };
-
-      if (response.token) {
-        // 🔐 Store token securely
-        await SecureStore.setItemAsync('token', response.token);
-
-        console.log('Token stored successfully');
-
-        // 🚀 Navigate to home screen
-        router.replace('/home');
-      } else {
-        alert('Login failed');
-      }
+      await SecureStore.setItemAsync('token', data.token);
+      router.replace('/home');
     } catch (error) {
-      console.log(error);
-      alert('Error logging in');
+      console.error(error);
+      alert('Network error — check your connection');
     }
   };
 
