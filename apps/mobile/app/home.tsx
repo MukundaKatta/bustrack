@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,8 +10,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { API_URL } from "../lib/api";
+
+const PING_INTERVAL_MS = 30_000;
 
 type DriverInfo = {
   name: string;
@@ -27,10 +30,83 @@ export default function Home() {
   const [tripActive, setTripActive] = useState(false);
   const [tripId, setTripId] = useState<string | null>(null);
   const [tripLoading, setTripLoading] = useState(false);
+  const [locationPermission, setLocationPermission] = useState(true);
+  const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const latestCoordsRef = useRef<{ latitude: number; longitude: number; speed: number | null } | null>(null);
+  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
     loadDriverInfo();
+    requestLocationPermission();
   }, []);
+
+  useEffect(() => {
+    if (tripActive) {
+      startPingCycle();
+    } else {
+      stopPingCycle();
+    }
+    return () => stopPingCycle();
+  }, [tripActive]);
+
+  const requestLocationPermission = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      setLocationPermission(false);
+      return;
+    }
+    setLocationPermission(true);
+  };
+
+  const startPingCycle = async () => {
+    locationSubRef.current = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 0 },
+      (loc) => {
+        latestCoordsRef.current = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          speed: loc.coords.speed,
+        };
+      }
+    );
+
+    await sendPing();
+    pingIntervalRef.current = setInterval(sendPing, PING_INTERVAL_MS);
+  };
+
+  const stopPingCycle = () => {
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+    if (locationSubRef.current) {
+      locationSubRef.current.remove();
+      locationSubRef.current = null;
+    }
+    latestCoordsRef.current = null;
+  };
+
+  const sendPing = async () => {
+    const coords = latestCoordsRef.current;
+    if (!coords) return;
+
+    const token = await SecureStore.getItemAsync("token");
+    if (!token) return;
+
+    await fetch(`${API_URL}/api/pings`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        speed: coords.speed ?? undefined,
+        recordedAt: new Date().toISOString(),
+      }),
+    }).catch(() => {});
+  };
 
   const loadDriverInfo = async () => {
     try {
@@ -178,8 +254,12 @@ export default function Home() {
           size={20}
           color={tripActive ? "#16a34a" : "#999"}
         />
-        <Text style={[styles.trackingText, tripActive && styles.trackingTextActive]}>
-          {tripActive ? "Location tracking is active" : "Start your trip to begin tracking"}
+        <Text style={[styles.trackingText, tripActive && styles.trackingTextActive, !locationPermission && styles.trackingTextDenied]}>
+          {!locationPermission
+            ? "Location permission denied — tracking unavailable"
+            : tripActive
+            ? "Location tracking is active"
+            : "Start your trip to begin tracking"}
         </Text>
       </View>
 
@@ -361,6 +441,10 @@ const styles = StyleSheet.create({
 
   trackingTextActive: {
     color: "#16a34a",
+  },
+
+  trackingTextDenied: {
+    color: "#dc2626",
   },
 
   footer: {
