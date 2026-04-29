@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     // Create user with 'parent' role
     const user = await prisma.user.create({
       data: {
-        email,
+        email: email.toLowerCase().trim(),
         passwordHash: hashedPassword,
         role: 'parent',
         name: email.split('@')[0],
