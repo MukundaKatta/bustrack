@@ -37,5 +37,10 @@
   },
   "prisma": {
     "seed": "node packages/shared/prisma/seed.js"
+  },
+  "pnpm": {
+    "overrides": {
+      "styled-jsx>react": "^18.3.1"
+    }
   }
 }
