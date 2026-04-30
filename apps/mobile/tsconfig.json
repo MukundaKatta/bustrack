@@ -3,6 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
+      "@bustrack/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
       "@/*": [
         "./*"
       ]
