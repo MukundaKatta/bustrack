@@ -7,6 +7,7 @@ export default defineConfig({
   schema: "packages/shared/prisma/schema.prisma",
   migrations: {
     path: "packages/shared/prisma/migrations",
+    seed: "node packages/shared/prisma/seed.js",
   },
   datasource: {
     // Prisma 7 datasource URL source of truth for CLI + Client generation.
