@@ -105,7 +105,7 @@ export default function Home() {
         speed: coords.speed ?? undefined,
         recordedAt: new Date().toISOString(),
       }),
-    }).catch(() => {});
+    }).catch((err) => console.warn("Ping failed:", err));
   };
 
   const loadDriverInfo = async () => {
