@@ -22,7 +22,13 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "BusTrack needs your location to track the trip route."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
