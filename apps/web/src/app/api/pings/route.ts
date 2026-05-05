@@ -1,4 +1,5 @@
 import { Role, TripStatus } from "@prisma/client";
+import { decode } from "next-auth/jwt";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
@@ -7,9 +8,31 @@ import { pingBodySchema } from "./schema";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+async function resolveDriverUser(request: Request) {
+  const auth = request.headers.get("authorization");
+  if (auth?.startsWith("Bearer ")) {
+    const secret = process.env.NEXTAUTH_SECRET;
+    if (!secret) return null;
+    const decoded = await decode({
+      token: auth.slice(7),
+      secret,
+    });
+    if (decoded?.id && decoded.role === Role.driver) {
+      return { id: decoded.id as string };
+    }
+  }
+
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== Role.driver) {
+  if (session?.user?.id && session.user.role === Role.driver) {
+    return { id: session.user.id };
+  }
+
+  return null;
+}
+
+export async function POST(request: Request) {
+  const user = await resolveDriverUser(request);
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -29,7 +52,7 @@ export async function POST(request: Request) {
   }
 
   const driver = await prisma.driver.findUnique({
-    where: { userId: session.user.id },
+    where: { userId: user.id },
   });
   if (!driver) {
     return NextResponse.json({ error: "Driver profile not found" }, { status: 403 });
