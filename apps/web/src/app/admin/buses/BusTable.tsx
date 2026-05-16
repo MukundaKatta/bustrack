@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Bus } from "./page";
-import { Button } from "@/components/ui/button"; 
+import { Bus } from './page';
+import { Button } from '@/components/ui/button';
 
 export default function BusTable({
   buses,
@@ -36,13 +36,13 @@ export default function BusTable({
                   <td className="p-3">{bus.capacity}</td>
 
                   <td className="p-3">
-                  <Button
-                    variant="outline"
-                    className="bg-red-500 hover:bg-red-600 text-white border-none"
-                    onClick={() => onDelete(bus.plate_number)}
-                  >
-                    Delete
-                  </Button>
+                    <Button
+                      variant="outline"
+                      className="bg-red-500 hover:bg-red-600 text-white border-none"
+                      onClick={() => onDelete(bus.plate_number)}
+                    >
+                      Delete
+                    </Button>
                   </td>
                 </tr>
               ))}

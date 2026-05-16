@@ -9,9 +9,7 @@ export default function Home() {
         alignItems: 'center',
       }}
     >
-      <Text style={{ fontSize: 22, fontWeight: 'bold' }}>
-        Welcome to Driver Home 🚍
-      </Text>
+      <Text style={{ fontSize: 22, fontWeight: 'bold' }}>Welcome to Driver Home 🚍</Text>
     </View>
   );
 }
