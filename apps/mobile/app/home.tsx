@@ -1,331 +1,299 @@
-import type { LocationPing } from '@bustrack/shared';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
 import * as Location from 'expo-location';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { API_URL } from '../lib/api';
 
 const PING_INTERVAL_MS = 30_000;
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
-const PING_INTERVAL_LABEL = `${PING_INTERVAL_MS / 1000}-second`;
 
-type PermissionState = 'idle' | 'requesting' | 'granted' | 'denied';
-
-type Coordinates = {
-  latitude: number;
-  longitude: number;
-  accuracy: number | null;
-  speed: number | null;
-  timestamp: string;
-  isoTimestamp: string;
+type DriverInfo = {
+  name: string;
+  busNumber: string;
+  plateNumber: string;
+  route: string;
 };
 
-function formatCoordinates(location: Location.LocationObject): Coordinates {
-  return {
-    latitude: location.coords.latitude,
-    longitude: location.coords.longitude,
-    accuracy: location.coords.accuracy ?? null,
-    speed: location.coords.speed ?? null,
-    timestamp: new Date(location.timestamp).toLocaleTimeString(),
-    isoTimestamp: new Date(location.timestamp).toISOString(),
-  };
-}
-
-function createPingPayload(coordinates: Coordinates): LocationPing {
-  return {
-    latitude: coordinates.latitude,
-    longitude: coordinates.longitude,
-    speed: coordinates.speed,
-    timestamp: coordinates.isoTimestamp,
-  };
-}
-
-export default function HomeScreen() {
-  const [foregroundPermission, setForegroundPermission] = useState<PermissionState>('idle');
-  const [backgroundPermission, setBackgroundPermission] = useState<PermissionState>('idle');
-  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
-  const [statusMessage, setStatusMessage] = useState('Requesting location access...');
+export default function Home() {
+  const router = useRouter();
+  const [driver, setDriver] = useState<DriverInfo | null>(null);
+  const [loading, setLoading] = useState(true);
   const [tripActive, setTripActive] = useState(false);
-  const [pendingPingCount, setPendingPingCount] = useState(0);
-  const [lastPingStatus, setLastPingStatus] = useState('No ping sent yet.');
-
-  const latestCoordinatesRef = useRef<Coordinates | null>(null);
-  const pendingPingsRef = useRef<LocationPing[]>([]);
-  const isSendingPingRef = useRef(false);
-
-  const canTrack = foregroundPermission === 'granted';
-  const pingReady = canTrack && Boolean(API_BASE_URL);
+  const [tripId, setTripId] = useState<string | null>(null);
+  const [tripLoading, setTripLoading] = useState(false);
+  const [locationPermission, setLocationPermission] = useState(true);
+  const [backgroundLocationPermission, setBackgroundLocationPermission] = useState(true);
+  const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const latestCoordsRef = useRef<{
+    latitude: number;
+    longitude: number;
+    speed: number | null;
+  } | null>(null);
+  const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    let subscription: Location.LocationSubscription | null = null;
-
-    async function startTracking() {
-      setForegroundPermission('requesting');
-      setBackgroundPermission('idle');
-      setStatusMessage('Requesting foreground location permission...');
-
-      try {
-        const foreground = await Location.requestForegroundPermissionsAsync();
-        if (!mounted) return;
-
-        if (!foreground.granted) {
-          setForegroundPermission('denied');
-          setBackgroundPermission('denied');
-          setStatusMessage(
-            'Location permission was denied. Enable it in Settings to start driver tracking.',
-          );
-          return;
-        }
-
-        setForegroundPermission('granted');
-        setStatusMessage('Foreground permission granted. Requesting background access...');
-
-        const currentLocation = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-        if (!mounted) return;
-
-        const initialCoordinates = formatCoordinates(currentLocation);
-        latestCoordinatesRef.current = initialCoordinates;
-        setCoordinates(initialCoordinates);
-
-        const background = await Location.requestBackgroundPermissionsAsync();
-        if (!mounted) return;
-
-        if (background.granted) {
-          setBackgroundPermission('granted');
-          setStatusMessage('Tracking active. Driver location is updating.');
-        } else {
-          setBackgroundPermission('denied');
-          setStatusMessage(
-            'Tracking active while the app is open. Background permission was denied.',
-          );
-        }
-
-        subscription = await Location.watchPositionAsync(
-          {
-            accuracy: Location.Accuracy.Balanced,
-            timeInterval: 10000,
-            distanceInterval: 10,
-          },
-          (nextLocation) => {
-            if (!mounted) return;
-
-            const nextCoordinates = formatCoordinates(nextLocation);
-            latestCoordinatesRef.current = nextCoordinates;
-            setCoordinates(nextCoordinates);
-          },
-        );
-      } catch (error) {
-        if (!mounted) return;
-
-        setForegroundPermission('denied');
-        setBackgroundPermission('denied');
-        setStatusMessage(
-          error instanceof Error ? error.message : 'Unable to start location tracking right now.',
-        );
-      }
-    }
-
-    void startTracking();
-
-    return () => {
-      mounted = false;
-      subscription?.remove();
-    };
+    loadDriverInfo();
+    requestLocationPermission();
   }, []);
 
-  const enqueueLatestPing = () => {
-    const latestCoordinates = latestCoordinatesRef.current;
+  useEffect(() => {
+    if (tripActive) {
+      startPingCycle();
+    } else {
+      stopPingCycle();
+    }
+    return () => stopPingCycle();
+  }, [tripActive]);
 
-    if (!latestCoordinates) {
-      setLastPingStatus('Trip is active, but GPS is not ready yet.');
+  const requestLocationPermission = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      setLocationPermission(false);
+      setBackgroundLocationPermission(false);
       return;
     }
 
-    pendingPingsRef.current.push(createPingPayload(latestCoordinates));
-    setPendingPingCount(pendingPingsRef.current.length);
+    setLocationPermission(true);
+
+    const background = await Location.requestBackgroundPermissionsAsync();
+    setBackgroundLocationPermission(background.status === 'granted');
   };
 
-  const flushPingQueue = async () => {
-    if (!API_BASE_URL || isSendingPingRef.current || pendingPingsRef.current.length === 0) {
-      return;
+  const startPingCycle = async () => {
+    locationSubRef.current = await Location.watchPositionAsync(
+      { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 0 },
+      (loc) => {
+        latestCoordsRef.current = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          speed: loc.coords.speed,
+        };
+      },
+    );
+
+    await sendPing();
+    pingIntervalRef.current = setInterval(sendPing, PING_INTERVAL_MS);
+  };
+
+  const stopPingCycle = () => {
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
     }
+    if (locationSubRef.current) {
+      locationSubRef.current.remove();
+      locationSubRef.current = null;
+    }
+    latestCoordsRef.current = null;
+  };
 
-    isSendingPingRef.current = true;
+  const sendPing = async () => {
+    const coords = latestCoordsRef.current;
+    if (!coords) return;
 
+    const token = await SecureStore.getItemAsync('token');
+    if (!token) return;
+
+    await fetch(`${API_URL}/api/pings`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        speed: coords.speed ?? undefined,
+        recordedAt: new Date().toISOString(),
+      }),
+    }).catch((err) => console.warn('Ping failed:', err));
+  };
+
+  const loadDriverInfo = async () => {
     try {
-      while (pendingPingsRef.current.length > 0) {
-        const nextPing = pendingPingsRef.current[0];
-        const response = await fetch(`${API_BASE_URL}/api/pings`, {
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        router.replace('/');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/api/driver/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        router.replace('/');
+        return;
+      }
+
+      const data = await res.json();
+      setDriver(data);
+    } catch (e) {
+      Alert.alert('Error', 'Unable to load driver details.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTripToggle = async () => {
+    try {
+      setTripLoading(true);
+      const token = await SecureStore.getItemAsync('token');
+      if (!token) {
+        router.replace('/');
+        return;
+      }
+
+      if (!tripActive) {
+        const res = await fetch(`${API_URL}/api/trips/start`, {
           method: 'POST',
           headers: {
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(nextPing),
         });
 
-        if (!response.ok) {
-          throw new Error(`Ping failed with status ${response.status}`);
-        }
+        if (!res.ok) throw new Error('Failed to start trip');
 
-        pendingPingsRef.current.shift();
-        setPendingPingCount(pendingPingsRef.current.length);
-        setLastPingStatus(`Last ping sent at ${new Date().toLocaleTimeString()}.`);
+        const data = await res.json();
+        setTripId(data.tripId ?? data.id ?? null);
+        setTripActive(true);
+      } else {
+        const res = await fetch(`${API_URL}/api/trips/end`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ tripId }),
+        });
+
+        if (!res.ok) throw new Error('Failed to end trip');
+
+        setTripId(null);
+        setTripActive(false);
       }
-    } catch (error) {
-      setPendingPingCount(pendingPingsRef.current.length);
-      setLastPingStatus(
-        error instanceof Error
-          ? `Network retry queued: ${error.message}`
-          : 'Network retry queued for the next ping cycle.',
+    } catch {
+      Alert.alert(
+        'Trip update failed',
+        tripActive ? 'Unable to end trip.' : 'Unable to start trip.',
       );
     } finally {
-      isSendingPingRef.current = false;
+      setTripLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!tripActive) {
-      return;
-    }
+  const initials =
+    driver?.name
+      .split(' ')
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) ?? '??';
 
-    if (!pingReady) {
-      setLastPingStatus(
-        API_BASE_URL
-          ? 'Trip is active, but location permission is still required.'
-          : 'Trip is active, but EXPO_PUBLIC_API_BASE_URL is not configured.',
-      );
-      return;
-    }
-
-    const runPingCycle = async () => {
-      enqueueLatestPing();
-      await flushPingQueue();
-    };
-
-    void runPingCycle();
-
-    const interval = setInterval(() => {
-      void runPingCycle();
-    }, PING_INTERVAL_MS);
-
-    return () => clearInterval(interval);
-  }, [tripActive, pingReady]);
-
-  const checkLocationServices = async () => {
-    try {
-      await Location.enableNetworkProviderAsync();
-      setStatusMessage(
-        'Location services check completed. If GPS is on, tracking will keep updating.',
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error ? error.message : 'Location services are not available right now.',
-      );
-    }
-  };
-
-  const toggleTrip = () => {
-    setTripActive((previous) => {
-      const next = !previous;
-
-      if (!next) {
-        pendingPingsRef.current = [];
-        setPendingPingCount(0);
-        setLastPingStatus('Trip stopped. Pending retries cleared.');
-      } else {
-        setLastPingStatus(`Trip active. Preparing ${PING_INTERVAL_LABEL} ping cycle.`);
-      }
-
-      return next;
-    });
-  };
-
-  const tripStatusLabel = useMemo(() => {
-    if (!tripActive) {
-      return 'Inactive';
-    }
-
-    if (!pingReady) {
-      return 'Blocked';
-    }
-
-    return 'Active';
-  }, [pingReady, tripActive]);
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <ActivityIndicator size="large" color="#2d5be3" style={{ flex: 1 }} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <Text style={styles.title}>BusTrack Driver</Text>
-        <Text style={styles.subtitle}>Live location permission and trip ping tracking</Text>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Permission status</Text>
-          <Text style={styles.label}>Foreground: {foregroundPermission}</Text>
-          <Text style={styles.label}>Background: {backgroundPermission}</Text>
-          <Text style={styles.status}>{statusMessage}</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Good Morning,</Text>
+          <Text style={styles.driverName}>{driver?.name ?? 'Driver'}</Text>
         </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Trip ping status</Text>
-          <Text style={styles.label}>Trip: {tripStatusLabel}</Text>
-          <Text style={styles.label}>Queued retries: {pendingPingCount}</Text>
-          <Text style={styles.label}>
-            API base URL: {API_BASE_URL ?? 'Missing EXPO_PUBLIC_API_BASE_URL'}
-          </Text>
-          <Text style={styles.status}>{lastPingStatus}</Text>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
+      </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Current GPS coordinates</Text>
-          {coordinates ? (
-            <>
-              <Text style={styles.value}>Latitude: {coordinates.latitude.toFixed(6)}</Text>
-              <Text style={styles.value}>Longitude: {coordinates.longitude.toFixed(6)}</Text>
-              <Text style={styles.value}>
-                Accuracy:{' '}
-                {coordinates.accuracy ? `${Math.round(coordinates.accuracy)} m` : 'Unknown'}
-              </Text>
-              <Text style={styles.value}>
-                Speed:{' '}
-                {coordinates.speed !== null ? `${coordinates.speed.toFixed(2)} m/s` : 'Unknown'}
-              </Text>
-              <Text style={styles.value}>Updated: {coordinates.timestamp}</Text>
-            </>
-          ) : (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color="#0f766e" />
-              <Text style={styles.loadingText}>Waiting for GPS fix...</Text>
-            </View>
-          )}
-        </View>
+      {/* Trip Status Badge */}
+      <View style={styles.statusRow}>
+        <View style={[styles.statusDot, tripActive && styles.statusDotActive]} />
+        <Text style={[styles.statusText, tripActive && styles.statusTextActive]}>
+          {tripActive ? 'Trip Active' : 'Trip Not Started'}
+        </Text>
+      </View>
 
-        {(foregroundPermission === 'denied' || backgroundPermission === 'denied') && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>If access is denied</Text>
-            <Text style={styles.helpText}>
-              The app stays on this screen and explains what is missing, so the driver is not
-              blocked by a crash. After enabling permission in device settings, reopen the app to
-              resume tracking.
-            </Text>
+      {/* Info Card */}
+      <View style={styles.card}>
+        <View style={styles.cardRow}>
+          <View style={styles.iconBox}>
+            <MaterialCommunityIcons name="bus" size={22} color="#2d5be3" />
           </View>
-        )}
-
-        <View style={styles.actions}>
-          <Pressable
-            style={[styles.button, styles.secondaryButton]}
-            onPress={() => void checkLocationServices()}
-          >
-            <Text style={styles.buttonText}>Check location services</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.button, tripActive ? styles.stopButton : styles.startButton]}
-            onPress={toggleTrip}
-          >
-            <Text style={styles.buttonText}>{tripActive ? 'Stop trip' : 'Start trip'}</Text>
-          </Pressable>
+          <View>
+            <Text style={styles.cardLabel}>Bus Number</Text>
+            <Text style={styles.cardValue}>{driver?.busNumber ?? '—'}</Text>
+            {driver?.plateNumber ? <Text style={styles.cardSub}>{driver.plateNumber}</Text> : null}
+          </View>
         </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.cardRow}>
+          <View style={styles.iconBox}>
+            <MaterialCommunityIcons name="map-marker-path" size={22} color="#2d5be3" />
+          </View>
+          <View>
+            <Text style={styles.cardLabel}>Route</Text>
+            <Text style={styles.cardValue}>{driver?.route ?? '—'}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Tracking Status */}
+      <View style={[styles.trackingBox, tripActive && styles.trackingBoxActive]}>
+        <MaterialCommunityIcons
+          name={tripActive ? 'navigation' : 'navigation-outline'}
+          size={20}
+          color={tripActive ? '#16a34a' : '#999'}
+        />
+        <Text
+          style={[
+            styles.trackingText,
+            tripActive && styles.trackingTextActive,
+            !locationPermission && styles.trackingTextDenied,
+          ]}
+        >
+          {!locationPermission
+            ? 'Location permission denied — tracking unavailable'
+            : !backgroundLocationPermission
+              ? 'Tracking works while the app is open; background permission is denied'
+              : tripActive
+                ? 'Location tracking is active'
+                : 'Start your trip to begin tracking'}
+        </Text>
+      </View>
+
+      {/* Start / End Trip Button */}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[styles.button, tripActive && styles.buttonEnd]}
+          onPress={handleTripToggle}
+          disabled={tripLoading}
+          activeOpacity={0.85}
+        >
+          {tripLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <MaterialCommunityIcons
+                name={tripActive ? 'stop-circle-outline' : 'play-circle-outline'}
+                size={22}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.buttonText}>{tripActive ? 'End Trip' : 'Start Trip'}</Text>
+            </>
+          )}
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -336,86 +304,185 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f7fb',
   },
-  container: {
-    flex: 1,
-    padding: 24,
-    gap: 16,
+
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 8,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#475569',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 18,
-    gap: 8,
-    shadowColor: '#0f172a',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#0f172a',
-  },
-  label: {
-    fontSize: 15,
-    color: '#1e293b',
-    textTransform: 'capitalize',
-  },
-  status: {
+
+  greeting: {
     fontSize: 14,
-    color: '#0f766e',
-    lineHeight: 20,
+    color: '#888',
   },
-  value: {
-    fontSize: 15,
-    color: '#1e293b',
+
+  driverName: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    marginTop: 2,
   },
-  loadingRow: {
+
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2d5be3',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+
+  statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    paddingHorizontal: 24,
+    marginBottom: 24,
   },
-  loadingText: {
-    fontSize: 14,
-    color: '#64748b',
+
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ccc',
+    marginRight: 6,
   },
-  helpText: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: '#475569',
+
+  statusDotActive: {
+    backgroundColor: '#22c55e',
   },
-  actions: {
-    marginTop: 'auto',
-    gap: 12,
-  },
-  button: {
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    alignItems: 'center',
-  },
-  secondaryButton: {
-    backgroundColor: '#0f766e',
-  },
-  startButton: {
-    backgroundColor: '#1d4ed8',
-  },
-  stopButton: {
-    backgroundColor: '#b91c1c',
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 15,
+
+  statusText: {
+    fontSize: 13,
+    color: '#999',
     fontWeight: '600',
+  },
+
+  statusTextActive: {
+    color: '#22c55e',
+  },
+
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    marginHorizontal: 24,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+    marginBottom: 16,
+  },
+
+  cardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#eef1fd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+
+  cardLabel: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 2,
+  },
+
+  cardValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a1a2e',
+  },
+
+  cardSub: {
+    fontSize: 12,
+    color: '#aaa',
+    marginTop: 2,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: '#f0f0f0',
+    marginVertical: 12,
+  },
+
+  trackingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+
+  trackingBoxActive: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#86efac',
+  },
+
+  trackingText: {
+    marginLeft: 10,
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '500',
+  },
+
+  trackingTextActive: {
+    color: '#16a34a',
+  },
+
+  trackingTextDenied: {
+    color: '#dc2626',
+  },
+
+  footer: {
+    position: 'absolute',
+    bottom: 36,
+    left: 24,
+    right: 24,
+  },
+
+  button: {
+    backgroundColor: '#2d5be3',
+    paddingVertical: 17,
+    borderRadius: 16,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#2d5be3',
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+
+  buttonEnd: {
+    backgroundColor: '#dc2626',
+    shadowColor: '#dc2626',
+  },
+
+  buttonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '700',
   },
 });
