@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const pingBodySchema = z.object({
   latitude: z.number().gte(-90).lte(90),

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import axios from "axios";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import axios from 'axios';
 
 // TODO(BT-05): Replace this local Bus type with import from @bustrack/shared once shared types are available (Sanjana's PR)
 type Bus = {
@@ -12,20 +12,20 @@ type Bus = {
 };
 
 export default function AdminDriversPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [bus, setBus] = useState("");
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [bus, setBus] = useState('');
   const [buses, setBuses] = useState<Bus[]>([]);
   const [loading, setLoading] = useState(false);
 
   // TODO(BT-14): Replace mock with axios.get("/api/buses") once backend API is ready
   useEffect(() => {
     const mockBuses: Bus[] = [
-      { id: "1", name: "School Bus 1", plate_number: "AP01" },
-      { id: "2", name: "School Bus 2", plate_number: "AP02" },
+      { id: '1', name: 'School Bus 1', plate_number: 'AP01' },
+      { id: '2', name: 'School Bus 2', plate_number: 'AP02' },
     ];
 
-    console.log("Mock buses:", mockBuses);
+    console.log('Mock buses:', mockBuses);
     setBuses(mockBuses);
   }, []);
 
@@ -34,27 +34,27 @@ export default function AdminDriversPage() {
 
     // TODO: Replace alert with inline validation and success banner
     if (!name || !email || !bus) {
-      alert("Please fill all required fields");
+      alert('Please fill all required fields');
       return;
     }
 
     setLoading(true);
 
     try {
-      await axios.post("/api/drivers", {
+      await axios.post('/api/drivers', {
         name,
         email,
         busId: bus,
       });
 
-      alert("Driver created successfully");
+      alert('Driver created successfully');
 
-      setName("");
-      setEmail("");
-      setBus("");
+      setName('');
+      setEmail('');
+      setBus('');
     } catch (err) {
       console.log(err);
-      alert("Error creating driver");
+      alert('Error creating driver');
     } finally {
       setLoading(false);
     }
@@ -63,9 +63,7 @@ export default function AdminDriversPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-6 rounded-xl shadow w-full max-w-md">
-        <h2 className="text-xl font-semibold mb-4 text-center">
-          Create Driver
-        </h2>
+        <h2 className="text-xl font-semibold mb-4 text-center">Create Driver</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
@@ -119,12 +117,8 @@ export default function AdminDriversPage() {
             </select>
           </div>
 
-          <Button
-            type="submit"
-            disabled={loading || !name || !email || !bus}
-            className="w-full"
-          >
-            {loading ? "Creating..." : "Create Driver"}
+          <Button type="submit" disabled={loading || !name || !email || !bus} className="w-full">
+            {loading ? 'Creating...' : 'Create Driver'}
           </Button>
         </form>
       </div>
