@@ -31,7 +31,9 @@ function popupHtml(bus: MockBus): string {
 export default function BusMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<Map<string, { marker: mapboxgl.Marker; popup: mapboxgl.Popup }>>(new Map());
+  const markersRef = useRef<Map<string, { marker: mapboxgl.Marker; popup: mapboxgl.Popup }>>(
+    new Map(),
+  );
   const [buses, setBuses] = useState<MockBus[]>(MOCK_BUSES);
 
   // Init map once
@@ -40,7 +42,7 @@ export default function BusMap() {
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-96.7970, 32.7767],
+      center: [-96.797, 32.7767],
       zoom: 12,
     });
     map.current.addControl(new mapboxgl.NavigationControl());
@@ -96,12 +98,18 @@ export default function BusMap() {
   return (
     <div style={{ position: 'relative' }}>
       <div ref={mapContainer} style={{ width: '100%', height: '600px' }} />
-      <div style={{
-        position: 'absolute', bottom: 12, left: 12,
-        background: 'rgba(255,255,255,0.92)', borderRadius: 8,
-        padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-        fontSize: 13,
-      }}>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 12,
+          left: 12,
+          background: 'rgba(255,255,255,0.92)',
+          borderRadius: 8,
+          padding: '8px 12px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          fontSize: 13,
+        }}
+      >
         {buses.map((bus) => (
           <div key={bus.id} style={{ marginBottom: 4 }}>
             <strong>{bus.name}</strong>

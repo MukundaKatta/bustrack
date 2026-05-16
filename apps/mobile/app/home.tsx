@@ -1,14 +1,7 @@
 import type { LocationPing } from '@bustrack/shared';
 import * as Location from 'expo-location';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 
 const PING_INTERVAL_MS = 30_000;
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
@@ -77,7 +70,9 @@ export default function HomeScreen() {
         if (!foreground.granted) {
           setForegroundPermission('denied');
           setBackgroundPermission('denied');
-          setStatusMessage('Location permission was denied. Enable it in Settings to start driver tracking.');
+          setStatusMessage(
+            'Location permission was denied. Enable it in Settings to start driver tracking.',
+          );
           return;
         }
 
@@ -101,7 +96,9 @@ export default function HomeScreen() {
           setStatusMessage('Tracking active. Driver location is updating.');
         } else {
           setBackgroundPermission('denied');
-          setStatusMessage('Tracking active while the app is open. Background permission was denied.');
+          setStatusMessage(
+            'Tracking active while the app is open. Background permission was denied.',
+          );
         }
 
         subscription = await Location.watchPositionAsync(
@@ -124,9 +121,7 @@ export default function HomeScreen() {
         setForegroundPermission('denied');
         setBackgroundPermission('denied');
         setStatusMessage(
-          error instanceof Error
-            ? error.message
-            : 'Unable to start location tracking right now.',
+          error instanceof Error ? error.message : 'Unable to start location tracking right now.',
         );
       }
     }
@@ -220,12 +215,12 @@ export default function HomeScreen() {
   const checkLocationServices = async () => {
     try {
       await Location.enableNetworkProviderAsync();
-      setStatusMessage('Location services check completed. If GPS is on, tracking will keep updating.');
+      setStatusMessage(
+        'Location services check completed. If GPS is on, tracking will keep updating.',
+      );
     } catch (error) {
       setStatusMessage(
-        error instanceof Error
-          ? error.message
-          : 'Location services are not available right now.',
+        error instanceof Error ? error.message : 'Location services are not available right now.',
       );
     }
   };
@@ -275,7 +270,9 @@ export default function HomeScreen() {
           <Text style={styles.cardTitle}>Trip ping status</Text>
           <Text style={styles.label}>Trip: {tripStatusLabel}</Text>
           <Text style={styles.label}>Queued retries: {pendingPingCount}</Text>
-          <Text style={styles.label}>API base URL: {API_BASE_URL ?? 'Missing EXPO_PUBLIC_API_BASE_URL'}</Text>
+          <Text style={styles.label}>
+            API base URL: {API_BASE_URL ?? 'Missing EXPO_PUBLIC_API_BASE_URL'}
+          </Text>
           <Text style={styles.status}>{lastPingStatus}</Text>
         </View>
 
@@ -286,10 +283,12 @@ export default function HomeScreen() {
               <Text style={styles.value}>Latitude: {coordinates.latitude.toFixed(6)}</Text>
               <Text style={styles.value}>Longitude: {coordinates.longitude.toFixed(6)}</Text>
               <Text style={styles.value}>
-                Accuracy: {coordinates.accuracy ? `${Math.round(coordinates.accuracy)} m` : 'Unknown'}
+                Accuracy:{' '}
+                {coordinates.accuracy ? `${Math.round(coordinates.accuracy)} m` : 'Unknown'}
               </Text>
               <Text style={styles.value}>
-                Speed: {coordinates.speed !== null ? `${coordinates.speed.toFixed(2)} m/s` : 'Unknown'}
+                Speed:{' '}
+                {coordinates.speed !== null ? `${coordinates.speed.toFixed(2)} m/s` : 'Unknown'}
               </Text>
               <Text style={styles.value}>Updated: {coordinates.timestamp}</Text>
             </>
@@ -305,14 +304,18 @@ export default function HomeScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>If access is denied</Text>
             <Text style={styles.helpText}>
-              The app stays on this screen and explains what is missing, so the driver is not blocked by a crash.
-              After enabling permission in device settings, reopen the app to resume tracking.
+              The app stays on this screen and explains what is missing, so the driver is not
+              blocked by a crash. After enabling permission in device settings, reopen the app to
+              resume tracking.
             </Text>
           </View>
         )}
 
         <View style={styles.actions}>
-          <Pressable style={[styles.button, styles.secondaryButton]} onPress={() => void checkLocationServices()}>
+          <Pressable
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => void checkLocationServices()}
+          >
             <Text style={styles.buttonText}>Check location services</Text>
           </Pressable>
 
