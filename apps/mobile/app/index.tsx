@@ -1,11 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
@@ -53,7 +47,6 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      
       {/* 🔹 HEADER */}
       <View style={styles.header}>
         <MaterialCommunityIcons name="bus" size={32} color="#2d5be3" />
@@ -69,12 +62,7 @@ export default function HomeScreen() {
       <Text style={styles.subtitle}>Driver Login</Text>
 
       {/* 🔹 EMAIL INPUT */}
-      <View
-        style={[
-          styles.inputContainer,
-          { borderColor: emailFocus ? '#2d5be3' : '#ccc' },
-        ]}
-      >
+      <View style={[styles.inputContainer, { borderColor: emailFocus ? '#2d5be3' : '#ccc' }]}>
         <MaterialCommunityIcons name="email-outline" size={20} color="gray" />
         <TextInput
           placeholder="Email"
@@ -87,12 +75,7 @@ export default function HomeScreen() {
       </View>
 
       {/* 🔹 PASSWORD INPUT */}
-      <View
-        style={[
-          styles.inputContainer,
-          { borderColor: passwordFocus ? '#2d5be3' : '#ccc' },
-        ]}
-      >
+      <View style={[styles.inputContainer, { borderColor: passwordFocus ? '#2d5be3' : '#ccc' }]}>
         <MaterialCommunityIcons name="lock-outline" size={20} color="gray" />
         <TextInput
           placeholder="Password"

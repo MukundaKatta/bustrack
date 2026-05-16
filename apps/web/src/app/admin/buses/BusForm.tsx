@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Bus } from "./page";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { Bus } from './page';
+import { Button } from '@/components/ui/button';
 
 export default function BusForm({ onAdd }: { onAdd: (bus: Bus) => void }) {
-  const [name, setName] = useState("");
-  const [plateNumber, setPlateNumber] = useState("");
-  const [capacity, setCapacity] = useState("");
-  const [error, setError] = useState("");
+  const [name, setName] = useState('');
+  const [plateNumber, setPlateNumber] = useState('');
+  const [capacity, setCapacity] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-if (!name || !plateNumber || !capacity) {
-      setError("All fields are required");
+    if (!name || !plateNumber || !capacity) {
+      setError('All fields are required');
       return;
     }
 
@@ -27,10 +27,10 @@ if (!name || !plateNumber || !capacity) {
     onAdd(newBus);
 
     // Reset
-    setName("");
-    setPlateNumber("");
-    setCapacity("");
-    setError("");
+    setName('');
+    setPlateNumber('');
+    setCapacity('');
+    setError('');
   };
 
   return (
@@ -64,10 +64,7 @@ if (!name || !plateNumber || !capacity) {
           className="w-full p-2 border rounded"
         />
 
-        <Button type="submit">
-          Create Bus
-        </Button>
-        
+        <Button type="submit">Create Bus</Button>
       </form>
     </div>
   );
