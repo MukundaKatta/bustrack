@@ -24,6 +24,7 @@ export default function Home() {
   const [tripId, setTripId] = useState<string | null>(null);
   const [tripLoading, setTripLoading] = useState(false);
   const [locationPermission, setLocationPermission] = useState(true);
+  const [backgroundLocationPermission, setBackgroundLocationPermission] = useState(true);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const latestCoordsRef = useRef<{
     latitude: number;
@@ -50,9 +51,14 @@ export default function Home() {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
       setLocationPermission(false);
+      setBackgroundLocationPermission(false);
       return;
     }
+
     setLocationPermission(true);
+
+    const background = await Location.requestBackgroundPermissionsAsync();
+    setBackgroundLocationPermission(background.status === 'granted');
   };
 
   const startPingCycle = async () => {
@@ -258,9 +264,11 @@ export default function Home() {
         >
           {!locationPermission
             ? 'Location permission denied — tracking unavailable'
-            : tripActive
-              ? 'Location tracking is active'
-              : 'Start your trip to begin tracking'}
+            : !backgroundLocationPermission
+              ? 'Tracking works while the app is open; background permission is denied'
+              : tripActive
+                ? 'Location tracking is active'
+                : 'Start your trip to begin tracking'}
         </Text>
       </View>
 
