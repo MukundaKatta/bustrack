@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import BusForm from "./BusForm";
-import BusTable from "./BusTable";
+import { useEffect, useState } from 'react';
+import BusForm from './BusForm';
+import BusTable from './BusTable';
 
 export type Bus = {
   name: string;
@@ -16,19 +16,19 @@ export default function BusPage() {
 
   // TODO: Replace localStorage with real API calls for BT-14
   useEffect(() => {
-  const stored = localStorage.getItem("buses");
-  if (stored) {
-    setBuses(JSON.parse(stored));
-  }
-  setIsLoaded(true);
+    const stored = localStorage.getItem('buses');
+    if (stored) {
+      setBuses(JSON.parse(stored));
+    }
+    setIsLoaded(true);
   }, []);
 
   // ✅ Save to localStorage
   useEffect(() => {
-  if (!isLoaded) return; // Don't save until we've loaded the initial data
+    if (!isLoaded) return; // Don't save until we've loaded the initial data
 
-  localStorage.setItem("buses", JSON.stringify(buses));
-  console.log("Saved buses:", buses);
+    localStorage.setItem('buses', JSON.stringify(buses));
+    console.log('Saved buses:', buses);
   }, [buses, isLoaded]);
 
   const handleAdd = (bus: Bus) => {
@@ -38,8 +38,7 @@ export default function BusPage() {
   const handleDelete = (plate_number: string) => {
     setBuses((prev) => prev.filter((bus) => bus.plate_number !== plate_number));
   };
-  if(!isLoaded) return null;
-
+  if (!isLoaded) return null;
 
   return (
     <div className="p-6">

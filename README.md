@@ -19,24 +19,29 @@ BusTrack solves the "where's my bus?" problem that parents face every morning. A
 ## 🏗️ Tech Stack
 
 ### Web (Parent App + Admin Panel)
+
 - Next.js 14 (App Router) + TypeScript
 - Tailwind CSS + shadcn/ui
 - Mapbox GL JS
 
 ### Mobile (Driver App)
+
 - React Native + Expo
 - Expo Location
 
 ### Backend
+
 - Next.js API routes
 - Prisma ORM
 - NextAuth.js
 - Zod
 
 ### Database
+
 - PostgreSQL (Neon)
 
 ### Deployment
+
 - Vercel (web)
 - Neon (database)
 - Expo Go (mobile)
@@ -44,14 +49,15 @@ BusTrack solves the "where's my bus?" problem that parents face every morning. A
 ---
 
 ## 📁 Repository Structure
-<img width="1038" height="454" alt="image" src="https://github.com/user-attachments/assets/cf19f255-e74a-4d29-a3c8-a5b3e4c99448" />
 
+<img width="1038" height="454" alt="image" src="https://github.com/user-attachments/assets/cf19f255-e74a-4d29-a3c8-a5b3e4c99448" />
 
 ---
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js 20+
 - npm or pnpm
 - Git
@@ -89,12 +95,14 @@ pnpm --filter @bustrack/web dev
 ---
 
 ## 📝 Commit Message Format
+
 type: short description [BT-XX]
 
 **Types:** `feat`, `fix`, `chore`, `refactor`, `docs`, `test`, `style`
 
 **Example:**
 feat: add login form UI [BT-08]
+
 ---
 
 ## 🎫 Tickets
@@ -105,17 +113,17 @@ All tickets are tracked in Jira. Each commit and PR must reference a ticket ID (
 
 ## 👥 Team Zion
 
-| Role | Name |
-|------|------|
-| 🏗️ Tech Lead | Mukunda Rao Katta |
-| 👑 Product Owner | Charan Lokku |
-| 📊 Data / ML | Sanjana Vegesana |
-| 🔧 Backend | Reema Sree S |
-| 📱 Mobile | Tharun Kumar Potharasi |
-| 🌐 Frontend | Manohar K |
-| 🛠️ DevOps | Hareesh Duvvuru |
-| 🎨 Admin Panel | Ravi Kiran V L |
-| 📱 Mobile Support | Teju |
+| Role              | Name                   |
+| ----------------- | ---------------------- |
+| 🏗️ Tech Lead      | Mukunda Rao Katta      |
+| 👑 Product Owner  | Charan Lokku           |
+| 📊 Data / ML      | Sanjana Vegesana       |
+| 🔧 Backend        | Reema Sree S           |
+| 📱 Mobile         | Tharun Kumar Potharasi |
+| 🌐 Frontend       | Manohar K              |
+| 🛠️ DevOps         | Hareesh Duvvuru        |
+| 🎨 Admin Panel    | Ravi Kiran V L         |
+| 📱 Mobile Support | Teju                   |
 
 ---
 
@@ -130,3 +138,13 @@ That's it. That's the goal. Everything we build in the next 2 weeks ladders up t
 **Free your mind. Then ship the ticket.**
 
 — Team Zion 🚀
+
+## Repository Health
+
+This repository includes a dependency-free health check for core documentation, metadata, and CI wiring. Run it locally before publishing changes:
+
+```sh
+python3 scripts/check_repository_health.py
+```
+
+The same check runs in GitHub Actions on pushes and pull requests.
