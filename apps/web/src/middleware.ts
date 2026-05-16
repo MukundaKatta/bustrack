@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
 const PROTECTED_ROUTES: {
   pattern: RegExp;
@@ -7,11 +7,11 @@ const PROTECTED_ROUTES: {
 }[] = [
   {
     pattern: /^\/admin(\/|$)/,
-    allowedRoles: ["admin"],
+    allowedRoles: ['admin'],
   },
   {
     pattern: /^\/map(\/|$)/,
-    allowedRoles: ["parent"],
+    allowedRoles: ['parent'],
   },
 ];
 
@@ -37,28 +37,23 @@ export async function middleware(req: NextRequest) {
   });
 
   if (!token) {
-    const signInUrl = new URL("/api/auth/signin", req.url);
-    signInUrl.searchParams.set("callbackUrl", req.url);
+    const signInUrl = new URL('/api/auth/signin', req.url);
+    signInUrl.searchParams.set('callbackUrl', req.url);
     return NextResponse.redirect(signInUrl);
   }
 
   const userRole = token.role as string | undefined;
 
   if (!userRole || !match.allowedRoles.includes(userRole)) {
-    return new NextResponse(
-      JSON.stringify({ message: "Forbidden: insufficient role" }),
-      {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      }
-    );
+    return new NextResponse(JSON.stringify({ message: 'Forbidden: insufficient role' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
