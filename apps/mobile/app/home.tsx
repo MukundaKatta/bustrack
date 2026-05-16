@@ -1,18 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
-import * as Location from "expo-location";
-import { useRouter } from "expo-router";
-import { API_URL } from "../lib/api";
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as SecureStore from 'expo-secure-store';
+import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
+import { API_URL } from '../lib/api';
 
 const PING_INTERVAL_MS = 30_000;
 
@@ -32,7 +25,11 @@ export default function Home() {
   const [tripLoading, setTripLoading] = useState(false);
   const [locationPermission, setLocationPermission] = useState(true);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const latestCoordsRef = useRef<{ latitude: number; longitude: number; speed: number | null } | null>(null);
+  const latestCoordsRef = useRef<{
+    latitude: number;
+    longitude: number;
+    speed: number | null;
+  } | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
@@ -51,7 +48,7 @@ export default function Home() {
 
   const requestLocationPermission = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
+    if (status !== 'granted') {
       setLocationPermission(false);
       return;
     }
@@ -67,7 +64,7 @@ export default function Home() {
           longitude: loc.coords.longitude,
           speed: loc.coords.speed,
         };
-      }
+      },
     );
 
     await sendPing();
@@ -90,14 +87,14 @@ export default function Home() {
     const coords = latestCoordsRef.current;
     if (!coords) return;
 
-    const token = await SecureStore.getItemAsync("token");
+    const token = await SecureStore.getItemAsync('token');
     if (!token) return;
 
     await fetch(`${API_URL}/api/pings`, {
-      method: "POST",
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         latitude: coords.latitude,
@@ -105,14 +102,14 @@ export default function Home() {
         speed: coords.speed ?? undefined,
         recordedAt: new Date().toISOString(),
       }),
-    }).catch((err) => console.warn("Ping failed:", err));
+    }).catch((err) => console.warn('Ping failed:', err));
   };
 
   const loadDriverInfo = async () => {
     try {
-      const token = await SecureStore.getItemAsync("token");
+      const token = await SecureStore.getItemAsync('token');
       if (!token) {
-        router.replace("/");
+        router.replace('/');
         return;
       }
 
@@ -121,14 +118,14 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        router.replace("/");
+        router.replace('/');
         return;
       }
 
       const data = await res.json();
       setDriver(data);
     } catch (e) {
-      Alert.alert("Error", "Unable to load driver details.");
+      Alert.alert('Error', 'Unable to load driver details.');
     } finally {
       setLoading(false);
     }
@@ -137,45 +134,45 @@ export default function Home() {
   const handleTripToggle = async () => {
     try {
       setTripLoading(true);
-      const token = await SecureStore.getItemAsync("token");
+      const token = await SecureStore.getItemAsync('token');
       if (!token) {
-        router.replace("/");
+        router.replace('/');
         return;
       }
 
       if (!tripActive) {
         const res = await fetch(`${API_URL}/api/trips/start`, {
-          method: "POST",
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
         });
 
-        if (!res.ok) throw new Error("Failed to start trip");
+        if (!res.ok) throw new Error('Failed to start trip');
 
         const data = await res.json();
         setTripId(data.tripId ?? data.id ?? null);
         setTripActive(true);
       } else {
         const res = await fetch(`${API_URL}/api/trips/end`, {
-          method: "POST",
+          method: 'POST',
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({ tripId }),
         });
 
-        if (!res.ok) throw new Error("Failed to end trip");
+        if (!res.ok) throw new Error('Failed to end trip');
 
         setTripId(null);
         setTripActive(false);
       }
     } catch {
       Alert.alert(
-        "Trip update failed",
-        tripActive ? "Unable to end trip." : "Unable to start trip."
+        'Trip update failed',
+        tripActive ? 'Unable to end trip.' : 'Unable to start trip.',
       );
     } finally {
       setTripLoading(false);
@@ -184,11 +181,11 @@ export default function Home() {
 
   const initials =
     driver?.name
-      .split(" ")
+      .split(' ')
       .map((w) => w[0])
-      .join("")
+      .join('')
       .toUpperCase()
-      .slice(0, 2) ?? "??";
+      .slice(0, 2) ?? '??';
 
   if (loading) {
     return (
@@ -204,7 +201,7 @@ export default function Home() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Good Morning,</Text>
-          <Text style={styles.driverName}>{driver?.name ?? "Driver"}</Text>
+          <Text style={styles.driverName}>{driver?.name ?? 'Driver'}</Text>
         </View>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initials}</Text>
@@ -215,7 +212,7 @@ export default function Home() {
       <View style={styles.statusRow}>
         <View style={[styles.statusDot, tripActive && styles.statusDotActive]} />
         <Text style={[styles.statusText, tripActive && styles.statusTextActive]}>
-          {tripActive ? "Trip Active" : "Trip Not Started"}
+          {tripActive ? 'Trip Active' : 'Trip Not Started'}
         </Text>
       </View>
 
@@ -227,10 +224,8 @@ export default function Home() {
           </View>
           <View>
             <Text style={styles.cardLabel}>Bus Number</Text>
-            <Text style={styles.cardValue}>{driver?.busNumber ?? "—"}</Text>
-            {driver?.plateNumber ? (
-              <Text style={styles.cardSub}>{driver.plateNumber}</Text>
-            ) : null}
+            <Text style={styles.cardValue}>{driver?.busNumber ?? '—'}</Text>
+            {driver?.plateNumber ? <Text style={styles.cardSub}>{driver.plateNumber}</Text> : null}
           </View>
         </View>
 
@@ -242,7 +237,7 @@ export default function Home() {
           </View>
           <View>
             <Text style={styles.cardLabel}>Route</Text>
-            <Text style={styles.cardValue}>{driver?.route ?? "—"}</Text>
+            <Text style={styles.cardValue}>{driver?.route ?? '—'}</Text>
           </View>
         </View>
       </View>
@@ -250,16 +245,22 @@ export default function Home() {
       {/* Tracking Status */}
       <View style={[styles.trackingBox, tripActive && styles.trackingBoxActive]}>
         <MaterialCommunityIcons
-          name={tripActive ? "navigation" : "navigation-outline"}
+          name={tripActive ? 'navigation' : 'navigation-outline'}
           size={20}
-          color={tripActive ? "#16a34a" : "#999"}
+          color={tripActive ? '#16a34a' : '#999'}
         />
-        <Text style={[styles.trackingText, tripActive && styles.trackingTextActive, !locationPermission && styles.trackingTextDenied]}>
+        <Text
+          style={[
+            styles.trackingText,
+            tripActive && styles.trackingTextActive,
+            !locationPermission && styles.trackingTextDenied,
+          ]}
+        >
           {!locationPermission
-            ? "Location permission denied — tracking unavailable"
+            ? 'Location permission denied — tracking unavailable'
             : tripActive
-            ? "Location tracking is active"
-            : "Start your trip to begin tracking"}
+              ? 'Location tracking is active'
+              : 'Start your trip to begin tracking'}
         </Text>
       </View>
 
@@ -276,14 +277,12 @@ export default function Home() {
           ) : (
             <>
               <MaterialCommunityIcons
-                name={tripActive ? "stop-circle-outline" : "play-circle-outline"}
+                name={tripActive ? 'stop-circle-outline' : 'play-circle-outline'}
                 size={22}
                 color="#fff"
                 style={{ marginRight: 8 }}
               />
-              <Text style={styles.buttonText}>
-                {tripActive ? "End Trip" : "Start Trip"}
-              </Text>
+              <Text style={styles.buttonText}>{tripActive ? 'End Trip' : 'Start Trip'}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -295,13 +294,13 @@ export default function Home() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f7fb",
+    backgroundColor: '#f5f7fb',
   },
 
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 24,
     paddingBottom: 8,
@@ -309,13 +308,13 @@ const styles = StyleSheet.create({
 
   greeting: {
     fontSize: 14,
-    color: "#888",
+    color: '#888',
   },
 
   driverName: {
     fontSize: 22,
-    fontWeight: "700",
-    color: "#1a1a2e",
+    fontWeight: '700',
+    color: '#1a1a2e',
     marginTop: 2,
   },
 
@@ -323,20 +322,20 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#2d5be3",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#2d5be3',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   avatarText: {
-    color: "#fff",
-    fontWeight: "700",
+    color: '#fff',
+    fontWeight: '700',
     fontSize: 16,
   },
 
   statusRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 24,
     marginBottom: 24,
   },
@@ -345,30 +344,30 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#ccc",
+    backgroundColor: '#ccc',
     marginRight: 6,
   },
 
   statusDotActive: {
-    backgroundColor: "#22c55e",
+    backgroundColor: '#22c55e',
   },
 
   statusText: {
     fontSize: 13,
-    color: "#999",
-    fontWeight: "600",
+    color: '#999',
+    fontWeight: '600',
   },
 
   statusTextActive: {
-    color: "#22c55e",
+    color: '#22c55e',
   },
 
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 20,
     marginHorizontal: 24,
     padding: 20,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.07,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
@@ -377,8 +376,8 @@ const styles = StyleSheet.create({
   },
 
   cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 6,
   },
 
@@ -386,82 +385,82 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: "#eef1fd",
-    justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: '#eef1fd',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
   },
 
   cardLabel: {
     fontSize: 12,
-    color: "#999",
+    color: '#999',
     marginBottom: 2,
   },
 
   cardValue: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#1a1a2e",
+    fontWeight: '600',
+    color: '#1a1a2e',
   },
 
   cardSub: {
     fontSize: 12,
-    color: "#aaa",
+    color: '#aaa',
     marginTop: 2,
   },
 
   divider: {
     height: 1,
-    backgroundColor: "#f0f0f0",
+    backgroundColor: '#f0f0f0',
     marginVertical: 12,
   },
 
   trackingBox: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     marginHorizontal: 24,
-    backgroundColor: "#fff",
+    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
+    borderColor: '#e5e7eb',
   },
 
   trackingBoxActive: {
-    backgroundColor: "#f0fdf4",
-    borderColor: "#86efac",
+    backgroundColor: '#f0fdf4',
+    borderColor: '#86efac',
   },
 
   trackingText: {
     marginLeft: 10,
     fontSize: 14,
-    color: "#999",
-    fontWeight: "500",
+    color: '#999',
+    fontWeight: '500',
   },
 
   trackingTextActive: {
-    color: "#16a34a",
+    color: '#16a34a',
   },
 
   trackingTextDenied: {
-    color: "#dc2626",
+    color: '#dc2626',
   },
 
   footer: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 36,
     left: 24,
     right: 24,
   },
 
   button: {
-    backgroundColor: "#2d5be3",
+    backgroundColor: '#2d5be3',
     paddingVertical: 17,
     borderRadius: 16,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    shadowColor: "#2d5be3",
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#2d5be3',
     shadowOpacity: 0.35,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -469,13 +468,13 @@ const styles = StyleSheet.create({
   },
 
   buttonEnd: {
-    backgroundColor: "#dc2626",
-    shadowColor: "#dc2626",
+    backgroundColor: '#dc2626',
+    shadowColor: '#dc2626',
   },
 
   buttonText: {
-    color: "#fff",
+    color: '#fff',
     fontSize: 17,
-    fontWeight: "700",
+    fontWeight: '700',
   },
 });

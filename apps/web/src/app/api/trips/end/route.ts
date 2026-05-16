@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
-import { decode } from "next-auth/jwt";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server';
+import { decode } from 'next-auth/jwt';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = await decode({
@@ -13,8 +13,8 @@ export async function POST(req: Request) {
     secret: process.env.NEXTAUTH_SECRET!,
   });
 
-  if (!decoded?.id || decoded.role !== "driver") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!decoded?.id || decoded.role !== 'driver') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const body = await req.json().catch(() => ({}));
@@ -24,24 +24,24 @@ export async function POST(req: Request) {
   });
 
   if (!driver) {
-    return NextResponse.json({ error: "Driver profile not found" }, { status: 404 });
+    return NextResponse.json({ error: 'Driver profile not found' }, { status: 404 });
   }
 
   const trip = await prisma.trip.findFirst({
     where: {
       id: body.tripId ?? undefined,
       driverId: driver.id,
-      status: "IN_PROGRESS",
+      status: 'IN_PROGRESS',
     },
   });
 
   if (!trip) {
-    return NextResponse.json({ error: "No active trip found" }, { status: 404 });
+    return NextResponse.json({ error: 'No active trip found' }, { status: 404 });
   }
 
   const updated = await prisma.trip.update({
     where: { id: trip.id },
-    data: { status: "COMPLETED", endedAt: new Date() },
+    data: { status: 'COMPLETED', endedAt: new Date() },
   });
 
   return NextResponse.json({ tripId: updated.id, status: updated.status });

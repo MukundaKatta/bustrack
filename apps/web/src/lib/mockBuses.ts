@@ -17,23 +17,23 @@ export const MOCK_BUSES: MockBus[] = [
   {
     id: 'bus-1',
     name: 'Bus 101',
-    lat: 32.7850,
-    lng: -96.8100,
-    nextStop: { name: 'Greenville Ave Stop', lat: 32.8020, lng: -96.7760 },
+    lat: 32.785,
+    lng: -96.81,
+    nextStop: { name: 'Greenville Ave Stop', lat: 32.802, lng: -96.776 },
   },
   {
     id: 'bus-2',
     name: 'Bus 202',
-    lat: 32.7600,
-    lng: -96.7800,
-    nextStop: { name: 'Deep Ellum Stop', lat: 32.7837, lng: -96.7950 },
+    lat: 32.76,
+    lng: -96.78,
+    nextStop: { name: 'Deep Ellum Stop', lat: 32.7837, lng: -96.795 },
   },
   {
     id: 'bus-3',
     name: 'Bus 303',
-    lat: 32.7900,
-    lng: -96.7500,
-    nextStop: { name: 'Lakewood Stop', lat: 32.8050, lng: -96.7300 },
+    lat: 32.79,
+    lng: -96.75,
+    nextStop: { name: 'Lakewood Stop', lat: 32.805, lng: -96.73 },
   },
 ];
 
